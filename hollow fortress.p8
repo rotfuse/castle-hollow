@@ -1,10 +1,15 @@
--- Initialisierung des Spiels
+-- initialisierung des spiels
 function _init()
-    px, py = 31 * 8, 31 * 8  -- Startposition x und y
-    speed = 1.5  -- Bewegungsgeschwindigkeit
+    px, py = 31 * 8, 31 * 8  -- startposition x und y
+    speed = 1.5  -- bewegungsgeschwindigkeit
     direction = "right"
-    sprite = 64  -- Start-Sprite
-    animating = true  -- Flag für die Animation
+    sprite = 64  -- start-sprite
+    animating = true  -- flag fれもr die animation
+    dialog_stage = 1  -- dialogstufe
+    dialog_texts = {
+        "ein offenes tor?\ndas fれもhlt sich\nnicht richtig an … ",
+        "warum ist niemand\nhier, um es zu\nbewachen?"
+    }
 end
 
 local blocking_sprites = { 44, 23, 26, 27, 15, 62, 63, 77, 85, 86, 110, 126, 7, 8, 9, 24, 118, 102, 40, 53, 21, 22, 18, 12, 5, 19, 46, 52 }
@@ -12,7 +17,7 @@ local blocking_zones = { {16, 19, 9, 1}, {27, 19, 6, 1}, {5, 18, 9, 3}, {66, 13,
 local free_zones = { {2, 8, 62, 1}, {15, 16, 23, 1}, {53, 16, 37, 1}, {5, 22, 13, 1}, {24, 22, 14, 1}, {55, 22, 33, 1}, {40, 22, 9, 1}, {70, 8, 20, 1}, {65, 9, 5, 1}, {19, 23, 5, 1}, {38, 20, 2, 1}, {49, 21, 2, 1}, {51, 20, 1, 1}, {40, 21, 1, 1} }
 local roof_zones = { {5, 16, 9, 2}, {16, 12, 7, 2}, {27, 18, 6, 2}, {16, 18, 9, 2}, {26, 12, 10, 2}, {66, 11, 5, 3}, {73, 12, 5, 2}, {80, 12, 6, 2}, {80, 18, 6, 2}, {72, 18, 5, 2}, {57, 8, 3, 2}, {64, 18, 5, 2}, {56, 18, 5, 2}, {31, 30, 1, 1} }
 
--- Kollisionsprüfung
+-- kollisionsprれもfung
 function check_collision(player_x, player_y)
     for _, corner in ipairs({
         {player_x, player_y},          -- oben links
@@ -47,10 +52,17 @@ function check_collision(player_x, player_y)
     return false
 end
 
--- Update-Funktion
+-- update-funktion
 function _update()
-    if animating then
-        -- Animation: Spieler bewegt sich von (31, 31) zu (31, 28)
+    if dialog_stage <= #dialog_texts then
+        if btnp(5) then  -- 'x' taste
+            dialog_stage += 1
+            if dialog_stage > #dialog_texts then
+                animating = true
+            end
+        end
+    elseif animating then
+        -- animation: spieler bewegt sich von (31, 31) zu (31, 28)
         if py > 28 * 8 then
             py = py - speed
             sprite = direction == "right" and 64 + flr((t() % 0.2) * 10) or 66 + flr((t() % 0.2) * 10)
@@ -58,66 +70,85 @@ function _update()
             animating = false
         end
     else
-        -- Normale Spielsteuerung
+        -- normale spielsteuerung
         local new_px, new_py = px, py
         local moving = false
 
-        -- Bewegungssteuerung
-        if btn(1) then  -- Rechts
+        -- bewegungssteuerung
+        if btn(1) then  -- rechts
             new_px += speed
             direction = "right"
             moving = true
-        elseif btn(0) then  -- Links
+        elseif btn(0) then  -- links
             new_px -= speed
             direction = "left"
             moving = true
         end
 
-        if btn(3) then  -- Runter
+        if btn(3) then  -- runter
             new_py += speed
             moving = true
-        elseif btn(2) then  -- Hoch
+        elseif btn(2) then  -- hoch
             new_py -= speed
             moving = true
         end
 
-        -- Animation aktualisieren
+        -- animation aktualisieren
         if moving then
             sprite = direction == "right" and 64 + flr((t() % 0.2) * 10) or 66 + flr((t() % 0.2) * 10)
         else
             sprite = direction == "right" and 64 or 66
         end
 
-        -- Kollision prüfen
+        -- kollision prれもfen
         if not check_collision(new_px, new_py) then
             px, py = new_px, new_py
         end
     end
-    -- Kamera aktualisieren
+    -- kamera aktualisieren
     update_camera()
 end
 
--- Zeichnen-Funktion
+-- zeichnen-funktion
 function _draw()
-    cls()  -- Bildschirm löschen
-    map(0, 0, 0, 0, 94, 32)  -- Karte rendern
+    cls()  -- bildschirm lれへschen
+    map(0, 0, 0, 0, 94, 32)  -- karte rendern
 
-    -- Spielfigur zeichnen
-    spr(sprite, px, py)
+    if dialog_stage <= #dialog_texts then
+        -- textbox anzeigen
+        local box_x, box_y = 23 * 8, 23 * 8
+        local box_width, box_height = 16 * 8, 14 * 8
+        rectfill(box_x, box_y, box_x + box_width, box_y + box_height, 0)  -- schwarzer hintergrund
 
-    -- Dächer zeichnen, falls der Spieler darunter ist
-    for _, zone in ipairs(roof_zones) do
-        for y = zone[2], zone[2] + zone[4] - 1 do
-            if py + 7 >= y * 8 then  -- Zeichne das Dach nur, wenn es unter dem Charakter ist
-                for x = zone[1], zone[1] + zone[3] - 1 do
-                    spr(mget(x, y), x * 8, y * 8)
+        local text = dialog_texts[dialog_stage]
+        local lines = split(text, "\n")
+        local line_height = 6
+        local total_text_height = #lines * line_height
+        local text_y = box_y + (box_height - total_text_height) // 2  -- text beginnt genau in der mitte der box
+
+        for i, line in ipairs(lines) do
+            local text_width = print(line, 0, -6)
+            local text_x = box_x + (box_width - text_width) // 2
+            print(line, text_x, text_y + (i - 1) * line_height, 7)
+        end
+    else
+        -- spielfigur zeichnen
+        spr(sprite, px, py)
+
+        -- dれさcher zeichnen, falls der spieler darunter ist
+        for _, zone in ipairs(roof_zones) do
+            for y = zone[2], zone[2] + zone[4] - 1 do
+                if py + 7 >= y * 8 then  -- zeichne das dach nur, wenn es unter dem charakter ist
+                    for x = zone[1], zone[1] + zone[3] - 1 do
+                        spr(mget(x, y), x * 8, y * 8)
+                    end
                 end
             end
         end
     end
 end
 
--- Kamera aktualisieren Funktion
+-- kamera aktualisieren funktion
 function update_camera()
     camera(px - 64, py - 64)
 end
