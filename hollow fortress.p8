@@ -1,20 +1,18 @@
-pico-8 cartridge // http://www.pico-8.com
-version 42
-__lua__
--- initialisierung des spiels
+-- Initialisierung des Spiels
 function _init()
-    px, py = 10 * 8, 10 * 8  -- startposition x und y
-    speed = 1.5  -- bewegungsgeschwindigkeit
+    px, py = 31 * 8, 31 * 8  -- Startposition x und y
+    speed = 1.5  -- Bewegungsgeschwindigkeit
     direction = "right"
-    sprite = 64  -- start-sprite
+    sprite = 64  -- Start-Sprite
+    animating = true  -- Flag für die Animation
 end
 
-local blocking_sprites = { 44, 23, 26, 27, 15, 62, 63, 77, 85, 86, 110, 126, 7, 8, 9, 24, 118, 102, 40, 53, 21, 22, 18, 12, 5, 19, 46      }
-local blocking_zones = { {16, 19, 9, 1}, {27, 19, 6, 1}, {5, 18, 9, 3}, {66, 13, 5, 1}, {73, 13, 5, 1}, {80, 13, 6, 1}, {80, 19, 6, 1}, {72, 19, 5, 1}, {64, 19, 5, 1}, {56, 19, 5, 1}, {26, 13, 10, 1}, {16, 13, 7, 1}, {2, 7, 88, 1}             }
-local free_zones = { {2, 8, 62, 1}, {15, 16, 23, 1}, {53, 16, 37, 1}, {5, 22, 13, 1}, {24, 22, 14, 1}, {55, 22, 33, 1}, {40, 22, 9, 1}, {70, 8, 20, 1}, {65, 9, 5, 1}, {19, 23, 5, 1}, {38, 20, 2, 1}, {49, 21, 2, 1}, {51, 20, 1, 1}, {40, 21, 1, 1}                    }
-local roof_zones = { {5, 16, 9, 2}, {16, 12, 7, 2}, {27, 18, 6, 2}, {16, 18, 9, 2}, {26, 12, 10, 2}, {66, 11, 5, 3}, {73, 12, 5, 2}, {80, 12, 6, 2}, {80, 18, 6, 2}, {72, 18, 5, 2}, {57, 8, 3, 2}, {64, 18, 5, 2}, {56, 18, 5, 2} }
+local blocking_sprites = { 44, 23, 26, 27, 15, 62, 63, 77, 85, 86, 110, 126, 7, 8, 9, 24, 118, 102, 40, 53, 21, 22, 18, 12, 5, 19, 46, 52 }
+local blocking_zones = { {16, 19, 9, 1}, {27, 19, 6, 1}, {5, 18, 9, 3}, {66, 13, 5, 1}, {73, 13, 5, 1}, {80, 13, 6, 1}, {80, 19, 6, 1}, {72, 19, 5, 1}, {64, 19, 5, 1}, {56, 19, 5, 1}, {26, 13, 10, 1}, {16, 13, 7, 1}, {2, 7, 88, 1}, {31, 31, 1, 1}, {57, 9, 3, 1} }
+local free_zones = { {2, 8, 62, 1}, {15, 16, 23, 1}, {53, 16, 37, 1}, {5, 22, 13, 1}, {24, 22, 14, 1}, {55, 22, 33, 1}, {40, 22, 9, 1}, {70, 8, 20, 1}, {65, 9, 5, 1}, {19, 23, 5, 1}, {38, 20, 2, 1}, {49, 21, 2, 1}, {51, 20, 1, 1}, {40, 21, 1, 1} }
+local roof_zones = { {5, 16, 9, 2}, {16, 12, 7, 2}, {27, 18, 6, 2}, {16, 18, 9, 2}, {26, 12, 10, 2}, {66, 11, 5, 3}, {73, 12, 5, 2}, {80, 12, 6, 2}, {80, 18, 6, 2}, {72, 18, 5, 2}, {57, 8, 3, 2}, {64, 18, 5, 2}, {56, 18, 5, 2}, {31, 30, 1, 1} }
 
--- kollisionsprれもfung
+-- Kollisionsprüfung
 function check_collision(player_x, player_y)
     for _, corner in ipairs({
         {player_x, player_y},          -- oben links
@@ -49,58 +47,68 @@ function check_collision(player_x, player_y)
     return false
 end
 
--- update funktion
+-- Update-Funktion
 function _update()
-    local new_px, new_py = px, py
-    local moving = false
-
-    -- bewegungssteuerung
-    if btn(1) then  -- rechts
-        new_px += speed
-        direction = "right"
-        moving = true
-    elseif btn(0) then  -- links
-        new_px -= speed
-        direction = "left"
-        moving = true
-    end
-
-    if btn(3) then  -- runter
-        new_py += speed
-        moving = true
-    elseif btn(2) then  -- hoch
-        new_py -= speed
-        moving = true
-    end
-
-    -- animation aktualisieren
-    if moving then
-        sprite = direction == "right" and 64 + flr((t() % 0.2) * 10) or 66 + flr((t() % 0.2) * 10)
+    if animating then
+        -- Animation: Spieler bewegt sich von (31, 31) zu (31, 28)
+        if py > 28 * 8 then
+            py = py - speed
+            sprite = direction == "right" and 64 + flr((t() % 0.2) * 10) or 66 + flr((t() % 0.2) * 10)
+        else
+            animating = false
+        end
     else
-        sprite = direction == "right" and 64 or 66
-    end
+        -- Normale Spielsteuerung
+        local new_px, new_py = px, py
+        local moving = false
 
-    -- kollision れもberprれもfen
-    if not check_collision(new_px, new_py) then
-        px, py = new_px, new_py
-    end
+        -- Bewegungssteuerung
+        if btn(1) then  -- Rechts
+            new_px += speed
+            direction = "right"
+            moving = true
+        elseif btn(0) then  -- Links
+            new_px -= speed
+            direction = "left"
+            moving = true
+        end
 
-    -- kamera aktualisieren
+        if btn(3) then  -- Runter
+            new_py += speed
+            moving = true
+        elseif btn(2) then  -- Hoch
+            new_py -= speed
+            moving = true
+        end
+
+        -- Animation aktualisieren
+        if moving then
+            sprite = direction == "right" and 64 + flr((t() % 0.2) * 10) or 66 + flr((t() % 0.2) * 10)
+        else
+            sprite = direction == "right" and 64 or 66
+        end
+
+        -- Kollision prüfen
+        if not check_collision(new_px, new_py) then
+            px, py = new_px, new_py
+        end
+    end
+    -- Kamera aktualisieren
     update_camera()
 end
 
--- zeichnen funktion
+-- Zeichnen-Funktion
 function _draw()
-    cls()  -- bildschirm lれへschen
-    map(0, 0, 0, 0, 94, 32)  -- karte rendern
+    cls()  -- Bildschirm löschen
+    map(0, 0, 0, 0, 94, 32)  -- Karte rendern
 
-    -- spielfigur zeichnen
+    -- Spielfigur zeichnen
     spr(sprite, px, py)
 
-    -- dれさcher zeichnen, falls der spieler darunter ist
+    -- Dächer zeichnen, falls der Spieler darunter ist
     for _, zone in ipairs(roof_zones) do
         for y = zone[2], zone[2] + zone[4] - 1 do
-            if py + 7 >= y * 8 then  -- zeichne das dach nur, wenn es unter dem charakter ist
+            if py + 7 >= y * 8 then  -- Zeichne das Dach nur, wenn es unter dem Charakter ist
                 for x = zone[1], zone[1] + zone[3] - 1 do
                     spr(mget(x, y), x * 8, y * 8)
                 end
@@ -109,37 +117,11 @@ function _draw()
     end
 end
 
--- kamera aktualisieren funktion
+-- Kamera aktualisieren Funktion
 function update_camera()
     camera(px - 64, py - 64)
 end
--->8
 
--->8
-function update_camera()
-    local screen_width, screen_height = 128, 128
-    local max_camx, max_camy = 93 * 8 - screen_width, 32 * 8 - screen_height
-
-    camx = mid(0, px - screen_width / 2 + 4, max_camx)
-    camy = mid(0, py - screen_height / 2 + 4, max_camy)
-    camera(camx, camy)
-end
-
-function update_player()
-    local move_x, move_y = 0, 0
-
-    if btn(0) then move_x = -speed end  -- links
-    if btn(1) then move_x = speed end   -- rechts
-    if btn(2) then move_y = -speed end  -- hoch
-    if btn(3) then move_y = speed end   -- runter
-
-    local new_px, new_py = px + move_x, py + move_y
-
-    -- れうberprれもfe kollision bevor position aktualisiert wird
-    if not check_collision(new_px, new_py) then
-        px, py = new_px, new_py
-    end
-end
 __gfx__
 00000000888448888888888899955999844448885505555555050000333333343333333333333334555555555555555544444444555555555550055500000000
 0000000088844888888888889aa55aa9844448885505555555050000333333343333333333333334555555555555555544444444555555555500005555555555
