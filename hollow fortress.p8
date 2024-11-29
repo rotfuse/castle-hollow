@@ -1,4 +1,3 @@
--- initialisierung des spiels
 function _init()
     px, py = 31 * 8, 31 * 8  -- startposition x und y
     speed = 1.5  -- bewegungsgeschwindigkeit
@@ -12,13 +11,15 @@ function _init()
     }
 end
 
-local blocking_sprites = { 44, 23, 26, 27, 15, 62, 63, 77, 85, 86, 110, 126, 7, 8, 9, 24, 118, 102, 40, 53, 21, 22, 18, 12, 5, 19, 46, 52 }
-local blocking_zones = { {16, 19, 9, 1}, {27, 19, 6, 1}, {5, 18, 9, 3}, {66, 13, 5, 1}, {73, 13, 5, 1}, {80, 13, 6, 1}, {80, 19, 6, 1}, {72, 19, 5, 1}, {64, 19, 5, 1}, {56, 19, 5, 1}, {26, 13, 10, 1}, {16, 13, 7, 1}, {2, 7, 88, 1}, {31, 31, 1, 1}, {57, 9, 3, 1} }
-local free_zones = { {2, 8, 62, 1}, {15, 16, 23, 1}, {53, 16, 37, 1}, {5, 22, 13, 1}, {24, 22, 14, 1}, {55, 22, 33, 1}, {40, 22, 9, 1}, {70, 8, 20, 1}, {65, 9, 5, 1}, {19, 23, 5, 1}, {38, 20, 2, 1}, {49, 21, 2, 1}, {51, 20, 1, 1}, {40, 21, 1, 1} }
+
+local non_blocking_sprites = { 2, 11, 13, 25, 29, 36, 41, 42, 109, 101, 117, 57, 20, 31 }
+local blocking_zones = { {16, 19, 9, 1}, {27, 19, 6, 1}, {5, 18, 9, 3}, {66, 13, 5, 1}, {73, 13, 5, 1}, {80, 13, 6, 1}, {80, 19, 6, 1}, {72, 19, 5, 1}, {64, 19, 5, 1}, {56, 19, 5, 1}, {26, 13, 10, 1}, {16, 13, 7, 1}, {2, 7, 88, 1}, {31, 31, 1, 1}, {57, 9, 3, 1}, {119, 54, 3, 5} }
+local free_zones = { {2, 8, 62, 1}, {15, 16, 23, 1}, {53, 16, 37, 1}, {5, 22, 13, 1}, {24, 22, 14, 1}, {55, 22, 33, 1}, {40, 22, 9, 1}, {70, 8, 20, 1}, {65, 9, 5, 1}, {19, 23, 5, 1}, {38, 20, 2, 1}, {49, 21, 2, 1}, {51, 20, 1, 1}, {40, 21, 1, 1},  {45, 7, 1, 1}, {118, 59, 5, 1}, }
 local roof_zones = { {5, 16, 9, 2}, {16, 12, 7, 2}, {27, 18, 6, 2}, {16, 18, 9, 2}, {26, 12, 10, 2}, {66, 11, 5, 3}, {73, 12, 5, 2}, {80, 12, 6, 2}, {80, 18, 6, 2}, {72, 18, 5, 2}, {57, 8, 3, 2}, {64, 18, 5, 2}, {56, 18, 5, 2}, {31, 30, 1, 1} }
 
 -- kollisionsprれもfung
 function check_collision(player_x, player_y)
+
     for _, corner in ipairs({
         {player_x, player_y},          -- oben links
         {player_x + 7, player_y},      -- oben rechts
@@ -28,6 +29,7 @@ function check_collision(player_x, player_y)
         local tile_x = flr(corner[1] / 8)
         local tile_y = flr(corner[2] / 8)
 
+        -- check if the position is within a free zone
         for _, zone in ipairs(free_zones) do
             if tile_x >= zone[1] and tile_x < zone[1] + zone[3] and
                tile_y >= zone[2] and tile_y < zone[2] + zone[4] then
@@ -35,6 +37,7 @@ function check_collision(player_x, player_y)
             end
         end
 
+        -- check if the position is within a blocking zone
         for _, zone in ipairs(blocking_zones) do
             if tile_x >= zone[1] and tile_x < zone[1] + zone[3] and
                tile_y >= zone[2] and tile_y < zone[2] + zone[4] then
@@ -43,14 +46,21 @@ function check_collision(player_x, player_y)
         end
 
         local tile_id = mget(tile_x, tile_y)
-        for _, sprite in ipairs(blocking_sprites) do
+        local is_non_blocking = false
+        for _, sprite in ipairs(non_blocking_sprites) do
             if tile_id == sprite then
-                return true
+                is_non_blocking = true
+                break
             end
+        end
+
+        if not is_non_blocking then
+            return true
         end
     end
     return false
 end
+
 
 -- update-funktion
 function _update()
@@ -93,6 +103,20 @@ function _update()
             moving = true
         end
 
+        -- teleportation prれもfen
+        if flr(new_px / 8) == 45 and flr(new_py / 8) == 7 then
+            new_px = 120 * 8
+            new_py = 61 * 8
+            in_new_room = true  -- set flag for new room
+        end
+        
+        
+         if flr(new_px / 8) == 120 and flr(new_py / 8) == 63 then
+            new_px = 45 * 8
+            new_py = 9 * 8
+        end
+        
+
         -- animation aktualisieren
         if moving then
             sprite = direction == "right" and 64 + flr((t() % 0.2) * 10) or 66 + flr((t() % 0.2) * 10)
@@ -112,26 +136,30 @@ end
 -- zeichnen-funktion
 function _draw()
     cls()  -- bildschirm lれへschen
-    map(0, 0, 0, 0, 94, 32)  -- karte rendern
+    map(0, 0, 0, 0, 128, 64)  -- die gesamte karte rendern
 
     if dialog_stage <= #dialog_texts then
-        -- textbox anzeigen
-        local box_x, box_y = 23 * 8, 23 * 8
-        local box_width, box_height = 16 * 8, 14 * 8
-        rectfill(box_x, box_y, box_x + box_width, box_y + box_height, 0)  -- schwarzer hintergrund
+        -- textbox dynamisch basierend auf der spielerposition platzieren
+        local box_width, box_height = 15 * 8, 15 * 8  -- 15x15 kacheln
+        local box_x = px - box_width // 2  -- zentriert horizontal
+        local box_y = py - box_height - 10  -- oberhalb des spielers, mit etwas abstand
 
+        rectfill(box_x, box_y, box_x + box_width, box_y + box_height, 0)  -- schwarze box
+
+        -- text ausgeben
         local text = dialog_texts[dialog_stage]
         local lines = split(text, "\n")
         local line_height = 6
         local total_text_height = #lines * line_height
-        local text_y = box_y + (box_height - total_text_height) // 2  -- text beginnt genau in der mitte der box
+        local text_y = box_y + (box_height - total_text_height) // 2  -- vertikal zentrieren
 
         for i, line in ipairs(lines) do
             local text_width = print(line, 0, -6)
-            local text_x = box_x + (box_width - text_width) // 2
-            print(line, text_x, text_y + (i - 1) * line_height, 7)
+            local text_x = box_x + (box_width - text_width) // 2  -- horizontal zentrieren
+            print(line, text_x, text_y + (i - 1) * line_height, 7)  -- text in weiれか
         end
     else
+    
         -- spielfigur zeichnen
         spr(sprite, px, py)
 
