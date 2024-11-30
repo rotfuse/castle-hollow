@@ -5,70 +5,60 @@ function _init()
     sprite = 64  -- start-sprite
     animating = true  -- flag fれもr die animation
     dialog_stage = 1  -- dialogstufe
+    secondary_dialog_active = false  -- flag fれもr zweite textbox
+    secondary_dialog_stage = 1  -- dialogstufe fれもr zweite textbox
+
+    -- haupt-dialog
     dialog_texts = {
         "ein offenes tor?\ndas fれもhlt sich\nnicht richtig an … ",
         "warum ist niemand\nhier, um es zu\nbewachen?"
     }
+
+    -- dialog fれもr zweite textbox
+    secondary_dialog_texts = {
+        "hier ist etwas\nmerkwれもrdiges ...",
+        "ich sollte\nvorsichtig sein!",
+    }
 end
 
+-- funktion zum zeichnen einer textbox
+function draw_textbox(text, player_x, player_y, width, height)
+    -- berれもcksichtige die kamera-position
+    local camera_x = stat(26)  -- kamera-x-offset
+    local camera_y = stat(27)  -- kamera-y-offset
 
-local non_blocking_sprites = { 2, 11, 13, 25, 29, 36, 41, 42, 109, 101, 117, 57, 20, 31 }
-local blocking_zones = { {16, 19, 9, 1}, {27, 19, 6, 1}, {5, 18, 9, 3}, {66, 13, 5, 1}, {73, 13, 5, 1}, {80, 13, 6, 1}, {80, 19, 6, 1}, {72, 19, 5, 1}, {64, 19, 5, 1}, {56, 19, 5, 1}, {26, 13, 10, 1}, {16, 13, 7, 1}, {2, 7, 88, 1}, {31, 31, 1, 1}, {57, 9, 3, 1}, {119, 54, 3, 5} }
-local free_zones = { {2, 8, 62, 1}, {15, 16, 23, 1}, {53, 16, 37, 1}, {5, 22, 13, 1}, {24, 22, 14, 1}, {55, 22, 33, 1}, {40, 22, 9, 1}, {70, 8, 20, 1}, {65, 9, 5, 1}, {19, 23, 5, 1}, {38, 20, 2, 1}, {49, 21, 2, 1}, {51, 20, 1, 1}, {40, 21, 1, 1},  {45, 7, 1, 1}, {118, 59, 5, 1}, }
-local roof_zones = { {5, 16, 9, 2}, {16, 12, 7, 2}, {27, 18, 6, 2}, {16, 18, 9, 2}, {26, 12, 10, 2}, {66, 11, 5, 3}, {73, 12, 5, 2}, {80, 12, 6, 2}, {80, 18, 6, 2}, {72, 18, 5, 2}, {57, 8, 3, 2}, {64, 18, 5, 2}, {56, 18, 5, 2}, {31, 30, 1, 1} }
+    -- spielerzentrum berechnen (mit kameraoffset)
+    local center_x = player_x - camera_x + 4
+    local center_y = player_y - camera_y + 4
 
--- kollisionsprれもfung
-function check_collision(player_x, player_y)
+    -- zentriere das dialogfenster horizontal und vertikal relativ zum spielerzentrum
+    local x = center_x - width // 2
+    local y = center_y - height // 2
 
-    for _, corner in ipairs({
-        {player_x, player_y},          -- oben links
-        {player_x + 7, player_y},      -- oben rechts
-        {player_x, player_y + 7},      -- unten links
-        {player_x + 7, player_y + 7},  -- unten rechts
-    }) do
-        local tile_x = flr(corner[1] / 8)
-        local tile_y = flr(corner[2] / 8)
-
-        -- check if the position is within a free zone
-        for _, zone in ipairs(free_zones) do
-            if tile_x >= zone[1] and tile_x < zone[1] + zone[3] and
-               tile_y >= zone[2] and tile_y < zone[2] + zone[4] then
-                return false
-            end
-        end
-
-        -- check if the position is within a blocking zone
-        for _, zone in ipairs(blocking_zones) do
-            if tile_x >= zone[1] and tile_x < zone[1] + zone[3] and
-               tile_y >= zone[2] and tile_y < zone[2] + zone[4] then
-                return true
-            end
-        end
-
-        local tile_id = mget(tile_x, tile_y)
-        local is_non_blocking = false
-        for _, sprite in ipairs(non_blocking_sprites) do
-            if tile_id == sprite then
-                is_non_blocking = true
-                break
-            end
-        end
-
-        if not is_non_blocking then
-            return true
-        end
+    -- zeichne die dialogbox
+    rectfill(x, y, x + width, y + height, 0)
+    local lines = split(text, "\n")
+    for i, line in ipairs(lines) do
+        print(line, x + 4, y + 4 + (i - 1) * 6, 7)
     end
-    return false
 end
-
 
 -- update-funktion
 function _update()
+    -- hauptdialog
     if dialog_stage <= #dialog_texts then
-        if btnp(5) then  -- 'x' taste
+        if btnp(5) then  -- 'x'-taste
             dialog_stage += 1
             if dialog_stage > #dialog_texts then
                 animating = true
+            end
+        end
+    -- zweiter dialog
+    elseif secondary_dialog_active then
+        if btnp(5) then  -- 'x'-taste
+            secondary_dialog_stage += 1
+            if secondary_dialog_stage > #secondary_dialog_texts then
+                secondary_dialog_active = false
             end
         end
     elseif animating then
@@ -103,19 +93,23 @@ function _update()
             moving = true
         end
 
+        -- bedingung fれもr die zweite textbox
+        if not secondary_dialog_active and
+           flr(new_px / 8) >= 115 and flr(new_px / 8) < 115 + 10 and
+           flr(new_py / 8) == 59 then
+            secondary_dialog_active = true
+            secondary_dialog_stage = 1
+        end
+
         -- teleportation prれもfen
         if flr(new_px / 8) == 45 and flr(new_py / 8) == 7 then
             new_px = 120 * 8
             new_py = 61 * 8
-            in_new_room = true  -- set flag for new room
         end
-        
-        
-         if flr(new_px / 8) == 120 and flr(new_py / 8) == 63 then
+        if flr(new_px / 8) == 120 and flr(new_py / 8) == 63 then
             new_px = 45 * 8
             new_py = 9 * 8
         end
-        
 
         -- animation aktualisieren
         if moving then
@@ -124,10 +118,7 @@ function _update()
             sprite = direction == "right" and 64 or 66
         end
 
-        -- kollision prれもfen
-        if not check_collision(new_px, new_py) then
-            px, py = new_px, new_py
-        end
+        px, py = new_px, new_py
     end
     -- kamera aktualisieren
     update_camera()
@@ -139,27 +130,10 @@ function _draw()
     map(0, 0, 0, 0, 128, 64)  -- die gesamte karte rendern
 
     if dialog_stage <= #dialog_texts then
-        -- textbox dynamisch basierend auf der spielerposition platzieren
-        local box_width, box_height = 15 * 8, 15 * 8  -- 15x15 kacheln
-        local box_x = px - box_width // 2  -- zentriert horizontal
-        local box_y = py - box_height - 10  -- oberhalb des spielers, mit etwas abstand
-
-        rectfill(box_x, box_y, box_x + box_width, box_y + box_height, 0)  -- schwarze box
-
-        -- text ausgeben
-        local text = dialog_texts[dialog_stage]
-        local lines = split(text, "\n")
-        local line_height = 6
-        local total_text_height = #lines * line_height
-        local text_y = box_y + (box_height - total_text_height) // 2  -- vertikal zentrieren
-
-        for i, line in ipairs(lines) do
-            local text_width = print(line, 0, -6)
-            local text_x = box_x + (box_width - text_width) // 2  -- horizontal zentrieren
-            print(line, text_x, text_y + (i - 1) * line_height, 7)  -- text in weiれか
-        end
+        draw_textbox(dialog_texts[dialog_stage], px, py, 120, 40)
+    elseif secondary_dialog_active then
+        draw_textbox(secondary_dialog_texts[secondary_dialog_stage], px, py, 120, 40)
     else
-    
         -- spielfigur zeichnen
         spr(sprite, px, py)
 
