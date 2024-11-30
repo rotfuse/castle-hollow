@@ -1,41 +1,23 @@
-function _init()
-    px, py = 31 * 8, 31 * 8  -- startposition x und y
-    speed = 1.5  -- bewegungsgeschwindigkeit
-    direction = "right"
-    sprite = 64  -- start-sprite
-    animating = true  -- flag fれもr die animation
-    dialog_stage = 1  -- dialogstufe
-    secondary_dialog_active = false  -- flag fれもr zweite textbox
-    secondary_dialog_stage = 1  -- dialogstufe fれもr zweite textbox
+-- tab 0: allgemeine spiellogik
 
-    -- haupt-dialog
-    dialog_texts = {
-        "ein offenes tor?\ndas fれもhlt sich\nnicht richtig an … ",
-        "warum ist niemand\nhier, um es zu\nbewachen?"
-    }
+-- variablen, die fれもr das gesamte spiel genutzt werden
+px, py = 31 * 8, 31 * 8  -- startposition x und y
+speed = 1.5  -- bewegungsgechwindigkeit
+direction = "right"
+sprite = 64  -- start-sprite
+animating = false  -- flag fれもr animation
 
-    -- dialog fれもr zweite textbox
-    secondary_dialog_texts = {
-        "hier ist etwas\nmerkwれもrdiges ...",
-        "ich sollte\nvorsichtig sein!",
-    }
-end
-
--- funktion zum zeichnen einer textbox
+-- funktion zum zeichnen der textbox
 function draw_textbox(text, player_x, player_y, width, height)
-    -- berれもcksichtige die kamera-position
     local camera_x = stat(26)  -- kamera-x-offset
     local camera_y = stat(27)  -- kamera-y-offset
 
-    -- spielerzentrum berechnen (mit kameraoffset)
     local center_x = player_x - camera_x + 4
     local center_y = player_y - camera_y + 4
 
-    -- zentriere das dialogfenster horizontal und vertikal relativ zum spielerzentrum
     local x = center_x - width // 2
     local y = center_y - height // 2
 
-    -- zeichne die dialogbox
     rectfill(x, y, x + width, y + height, 0)
     local lines = split(text, "\n")
     for i, line in ipairs(lines) do
@@ -43,26 +25,100 @@ function draw_textbox(text, player_x, player_y, width, height)
     end
 end
 
--- update-funktion
+-- funktion fれもr die allgemeine spielerbewegung
+function player_movement()
+    local new_px, new_py = px, py
+    local moving = false
+
+    if btn(1) then
+        new_px += speed
+        direction = "right"
+        moving = true
+    elseif btn(0) then
+        new_px -= speed
+        direction = "left"
+        moving = true
+    end
+
+    if btn(3) then
+        new_py += speed
+        moving = true
+    elseif btn(2) then
+        new_py -= speed
+        moving = true
+    end
+
+    if moving then
+        sprite = direction == "right" and 64 + flr((t() % 0.2) * 10) or 66 + flr((t() % 0.2) * 10)
+    else
+        sprite = direction == "right" and 64 or 66
+    end
+
+    px, py = new_px, new_py
+end
+
+-- kamera aktualisieren
+function update_camera()
+    camera(px - 64, py - 64)
+end
+
+
+
+
+
+
+
+-- tab 1: stage 1 - spezifische spiellogik
+
+-- variablen und flags fれもr stage 1
+dialog_stage = 1  -- dialogstufe
+secondary_dialog_active = false  -- flag fれもr zweite textbox
+secondary_dialog_stage = 1  -- dialogstufe fれもr zweite textbox
+secondary_dialog_completed = false  -- dialog abgeschlossen
+tile_changed = false  -- flag fれもr kachelれさnderung
+tile_animated = false  -- flag fれもr tile-animation
+
+-- dialogtexte fれもr stage 1
+dialog_texts = {
+    "ein offenes tor?\ndas fれもhlt sich\nnicht richtig an … ",
+    "warum ist niemand\nhier, um es zu\nbewachen?"
+}
+
+secondary_dialog_texts = {
+    "hier ist etwas\nmerkwれもrdiges ...",
+    "ich sollte\nvorsichtig sein!"
+}
+
+-- init-funktion fれもr stage 1
+function _init()
+    animating = true  -- animation starten
+    tile_changed = false  -- kachelれさnderung als false setzen
+    tile_animated = false  -- kachel-animation als false setzen
+end
+
+-- update-funktion fれもr stage 1
 function _update()
-    -- hauptdialog
+    -- spielerbewegung aufrufen (aus tab 0)
+    player_movement()
+
+    -- dialog fれもr stage 1
     if dialog_stage <= #dialog_texts then
-        if btnp(5) then  -- 'x'-taste
+        if btnp(5) then
             dialog_stage += 1
             if dialog_stage > #dialog_texts then
-                animating = true
+                animating = true  -- starte die animation
             end
         end
-    -- zweiter dialog
     elseif secondary_dialog_active then
-        if btnp(5) then  -- 'x'-taste
+        if btnp(5) then
             secondary_dialog_stage += 1
             if secondary_dialog_stage > #secondary_dialog_texts then
                 secondary_dialog_active = false
+                secondary_dialog_completed = true  -- dialog abgeschlossen
             end
         end
     elseif animating then
-        -- animation: spieler bewegt sich von (31, 31) zu (31, 28)
+        -- animation, wenn spieler auf der karte ist
         if py > 28 * 8 then
             py = py - speed
             sprite = direction == "right" and 64 + flr((t() % 0.2) * 10) or 66 + flr((t() % 0.2) * 10)
@@ -70,90 +126,67 @@ function _update()
             animating = false
         end
     else
-        -- normale spielsteuerung
-        local new_px, new_py = px, py
-        local moving = false
-
-        -- bewegungssteuerung
-        if btn(1) then  -- rechts
-            new_px += speed
-            direction = "right"
-            moving = true
-        elseif btn(0) then  -- links
-            new_px -= speed
-            direction = "left"
-            moving = true
-        end
-
-        if btn(3) then  -- runter
-            new_py += speed
-            moving = true
-        elseif btn(2) then  -- hoch
-            new_py -= speed
-            moving = true
-        end
-
-        -- bedingung fれもr die zweite textbox
-        if not secondary_dialog_active and
-           flr(new_px / 8) >= 115 and flr(new_px / 8) < 115 + 10 and
-           flr(new_py / 8) == 59 then
+        -- zone betreten, um zweiten dialog zu starten
+        if not secondary_dialog_active and not secondary_dialog_completed and
+           flr(px / 8) >= 115 and flr(px / 8) < 115 + 10 and
+           flr(py / 8) == 59 then
             secondary_dialog_active = true
             secondary_dialog_stage = 1
         end
 
-        -- teleportation prれもfen
-        if flr(new_px / 8) == 45 and flr(new_py / 8) == 7 then
-            new_px = 120 * 8
-            new_py = 61 * 8
-        end
-        if flr(new_px / 8) == 120 and flr(new_py / 8) == 63 then
-            new_px = 45 * 8
-            new_py = 9 * 8
+        -- teleportation zu bestimmten punkten (45, 8)
+        if flr(px / 8) == 45 and flr(py / 8) == 7 then
+            px = 120 * 8
+            py = 61 * 8
         end
 
-        -- animation aktualisieren
-        if moving then
-            sprite = direction == "right" and 64 + flr((t() % 0.2) * 10) or 66 + flr((t() % 0.2) * 10)
-        else
-            sprite = direction == "right" and 64 or 66
-        end
+        -- zurれもckteleportation bei (120, 63)
+        if flr(px / 8) == 120 and flr(py / 8) == 63 then
+            px = 45 * 8
+            py = 9 * 8
 
-        px, py = new_px, new_py
+            -- kachelれさnderung an (58, 13) und animation starten
+            if not tile_changed then
+                mset(58, 13, 98)  -- れさndere kachel-sprite
+                tile_changed = true
+            end
+
+            -- starte die tile-animation
+            tile_animated = true
+        end
     end
-    -- kamera aktualisieren
+
     update_camera()
 end
 
--- zeichnen-funktion
+-- draw-funktion fれもr stage 1
 function _draw()
-    cls()  -- bildschirm lれへschen
-    map(0, 0, 0, 0, 128, 64)  -- die gesamte karte rendern
+    cls()
+    map(0, 0, 0, 0, 128, 64)  -- karte zeichnen
 
+    -- zeichnen der dialoge
     if dialog_stage <= #dialog_texts then
         draw_textbox(dialog_texts[dialog_stage], px, py, 120, 40)
     elseif secondary_dialog_active then
         draw_textbox(secondary_dialog_texts[secondary_dialog_stage], px, py, 120, 40)
     else
-        -- spielfigur zeichnen
-        spr(sprite, px, py)
-
-        -- dれさcher zeichnen, falls der spieler darunter ist
-        for _, zone in ipairs(roof_zones) do
-            for y = zone[2], zone[2] + zone[4] - 1 do
-                if py + 7 >= y * 8 then  -- zeichne das dach nur, wenn es unter dem charakter ist
-                    for x = zone[1], zone[1] + zone[3] - 1 do
-                        spr(mget(x, y), x * 8, y * 8)
-                    end
-                end
-            end
+        -- animierte kachel (43, 18) wechseln zwischen 123 und 124
+        if tile_animated then
+            local sprite_index = 123 + flr((t() * 5) % 2)
+            spr(sprite_index, 43 * 8, 18 * 8)
         end
     end
+
+    -- spieler-sprite immer zeichnen
+    spr(sprite, px, py)
 end
 
--- kamera aktualisieren funktion
-function update_camera()
-    camera(px - 64, py - 64)
-end
+
+
+
+
+
+
 
 __gfx__
 00000000888448888888888899955999844448885505555555050000333333343333333333333334555555555555555544444444555555555550055500000000
