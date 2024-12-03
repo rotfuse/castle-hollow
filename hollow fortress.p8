@@ -643,11 +643,8 @@ function draw_dialog_near_player(dialog_text, offset_y)
 end
 end
 
--- tab 3: stage 3 - spezifische spiellogik
-
 local coin_count = 1 -- startwert: katze hat eine mれもnze gegeben
-local stage3_coin_obtained = false -- neue variable zum halten des mれもnzenzustands -- variable zum halten des mれもnzenzustands (bleibt cat_coin_obtained)
-
+local stage3_coin_obtained = false -- neue variable zum halten des mれもnzenzustands
 
 -- allgemeine variablen fれもr mれもnzen und ihre zonen
 local coin_zones = {
@@ -655,7 +652,6 @@ local coin_zones = {
     {taken = false, sprite = 68, x = 118, y = 53, w = 3, h = 3},
     {taken = false, sprite = 68, x = 113, y = 3, w = 3, h = 3}
 }
-
 
 -- teleportationsdaten: {x1, y1, x2, y2}
 local teleports = {
@@ -666,7 +662,6 @@ local teleports = {
     {72, 7, 117, 9} -- taverne
 }
 
-
 -- variablen fれもr den hundedialog
 dog_dialog_active = false -- ob der hundedialog aktiv ist
 dog_dialog_stage = 1 -- aktuelle dialogzeile
@@ -676,64 +671,94 @@ local dog_dialog_text = {
     "kiek mol,\nwat haett' ich\ndenn huet foer dich!",
     "ein glas warme milch\n-frisch gemolken,\nkraeftig foer de\nschnurrhaare!",
     "und dat beste:\nkost' dich bloss\n4 muenz!\nein richtiger\nschnapper, wa?",
-    "willst du ein\nglas milch kaufen?"
+    "glas milch kaufen?\n\nja"
+}
+
+local post_dog_dialog_text = {
+    "och nee,\nreicht dat etwa nich?\nna wunderbar...",
+    "ick hab' hier\nnich den ganzen\ntag zeit",
+    "kannste dir vielleicht\nwoanders 'ne billigere\nmilch holen,\noder komm wieder,\nwenn de wat mehr\nmuenz in der\ntasche hast",
+    "ah, fein! hier is deine milch!\ndirekt aus der kanne! un pass auf,\nnik kleckern, sonst gibbet nasse pfoten!"
 }
 
 local dog_zone = {x = 122, y = 5, w = 3, h = 3} -- zone fれもr den hund
--- zonenprれもfung dynamisch innerhalb der update-funktion:
 
+-- variablen fれもr den post-dialog
+post_dog_dialog_active = false
+post_dog_dialog_stage = 0
 
 function stage3_update()
+    -- verhindern der bewegung wれさhrend des dialogs
+    if dog_dialog_active then
+        -- fortschritt im dialog
+        if btnp(5) then -- "x"-taste gedrれもckt
+            dog_dialog_stage += 1
 
--- check if player is in dog zone
+            -- wenn der dialog abgeschlossen ist
+            if dog_dialog_stage > #dog_dialog_text then
+                dog_dialog_active = false -- dialog beenden
+                dog_dialog_completed = true -- dialog abgeschlossen
+
+                -- bestimmen, welcher post-dialog angezeigt wird
+                if coin_count < 4 then
+                    post_dog_dialog_stage = 1 -- zeige den text fれもr weniger als 4 mれもnzen
+                else
+                    post_dog_dialog_stage = 4 -- zeige den text fれもr genau 4 oder mehr mれもnzen
+                end
+                post_dog_dialog_active = true -- aktiviere den post-dialog
+            end
+        end
+        return -- blockiere bewegung und alle anderen aktionen wれさhrend des dialogs
+    end
+
+    if post_dog_dialog_active then
+        -- fortschritt im post-dialog
+        if btnp(5) then -- "x"-taste gedrれもckt
+            post_dog_dialog_active = false -- post-dialog beenden
+        end
+        return -- blockiere bewegung und alle anderen aktionen wれさhrend des post-dialogs
+    end
+
+    -- れうberprれもfen, ob der spieler in der hund-zone ist
     player_in_dog_zone = flr(px / 8) >= dog_zone.x and flr(px / 8) < dog_zone.x + dog_zone.w and
                          flr(py / 8) >= dog_zone.y and flr(py / 8) < dog_zone.y + dog_zone.h
-    
--- activate dialog if conditions are met
-if player_in_dog_zone and not dog_dialog_active and not dog_dialog_completed then
-    dog_dialog_active = true
-    dog_dialog_stage = 1 -- start dialog from the beginning
-end
-    
 
--- fortschritt im dialog:
-if dog_dialog_active and btnp(5) then -- "x"-taste gedrれもckt
-    dog_dialog_stage += 1
-    
-    -- wenn der dialog abgeschlossen ist
-    if dog_dialog_stage > #dog_dialog_text then
-            dog_dialog_active = false -- dialog beenden
-            dog_dialog_completed = true -- dialog abgeschlossen
-        else
-            -- zurれもck zu der frage, ob der spieler kaufen mれへchte
-            dog_dialog_stage = #dog_dialog_text - 1
-        end
+    -- dialog aktivieren, wenn der spieler in der hund-zone ist und der dialog noch nicht abgeschlossen ist
+    if player_in_dog_zone and not dog_dialog_active and not dog_dialog_completed then
+        dog_dialog_active = true
+        dog_dialog_stage = 1 -- starte den dialog von vorne
     end
-end
-    
--- wenn die erste mれもnze in stage 3 erhalten wurde, wird coin_count nur einmal auf 1 gesetzt
+
+    -- wenn die erste mれもnze in stage 3 erhalten wurde, wird coin_count nur einmal auf 1 gesetzt
     if cat_coin_obtained and not stage3_coin_obtained then
-        stage3_coin_obtained = true  -- markiere, dass die mれもnze in stage 3 erhalten wurde
-        -- coin_count bleibt bei 1, ohne es zurれもckzusetzen
+        stage3_coin_obtained = true -- markiere, dass die mれもnze in stage 3 erhalten wurde
     end
 
-
- -- teleportation prれもfen
+    -- teleportation prれもfen
     for _, teleport in pairs(teleports) do
         -- hinteleportation
         if flr(px / 8) == teleport[1] and flr(py / 8) == teleport[2] then
             px = teleport[3] * 8  -- teleportiere den spieler zum ziel
             py = teleport[4] * 8
 
+            -- dialog zurれもcksetzen
+            dog_dialog_completed = false
+            dog_dialog_active = false
+            dog_dialog_stage = 1
+
         -- rれもckteleportation
         elseif flr(px / 8) == teleport[3] and flr(py / 8) == teleport[4] then
             px = teleport[1] * 8  -- teleportiere den spieler zurれもck zum startpunkt
             py = (teleport[2] + 2) * 8  -- verschiebe den rれもckteleport um y=2 nach unten
+
+            -- dialog zurれもcksetzen
+            dog_dialog_completed = false
+            dog_dialog_active = false
+            dog_dialog_stage = 1
         end
     end
 
-
--- れうberprれもfen und aktualisieren der mれもnz-zonen
+    -- れうberprれもfen und aktualisieren der mれもnzen-zonen
     for _, zone in pairs(coin_zones) do
         local player_in_zone = flr(px / 8) >= zone.x and flr(px / 8) < zone.x + zone.w and
                                flr(py / 8) >= zone.y and flr(py / 8) < zone.y + zone.h
@@ -749,12 +774,9 @@ end
     end
 end
 
-
-  
 function stage3_draw()
     cls()
     map(0, 0, 0, 0, 128, 64)  -- karte fれもr stage 3 laden
-
 
     -- mれもnze weiterhin anzeigen, wenn erhalten
     if stage3_coin_obtained then
@@ -764,12 +786,16 @@ function stage3_draw()
     -- spieler-sprite immer zeichnen
     spr(sprite, px, py)
     
-    -- draw dog dialog if active
+    -- zeige den normalen dog-dialog, wenn er aktiv ist
     if dog_dialog_active then
         draw_dog_dialog()
     end
+    
+    -- zeige den post-dialog an, wenn er aktiv ist
+    if post_dog_dialog_active then
+        draw_post_dog_dialog()
+    end
 end
-
 
 function draw_item_in_ui(sprite_id, x_offset, count)
     local camera_x = stat(26)
@@ -790,11 +816,18 @@ end
 function draw_dog_dialog()
     local camera_x = stat(26)
     local camera_y = stat(27)
-    local dialog_x = camera_x + 8 -- some space from the left corner
-    local dialog_y = camera_y + 8 -- top of the screen
-    draw_textbox(dog_dialog_text[dog_dialog_stage], dialog_x, dialog_y, 120, 30)
+    local textbox_x = px - camera_x
+    local textbox_y = py - camera_y  -- oder beliebiger offset
+    draw_textbox(dog_dialog_text[dog_dialog_stage], textbox_x, textbox_y, 120, 40)
 end
 
+function draw_post_dog_dialog()
+    local camera_x = stat(26)
+    local camera_y = stat(27)
+    local textbox_x = px - camera_x
+    local textbox_y = py - camera_y  -- oder beliebiger offset
+    draw_textbox(post_dog_dialog_text[post_dog_dialog_stage], textbox_x, textbox_y, 120, 40)
+end
     
      
     
