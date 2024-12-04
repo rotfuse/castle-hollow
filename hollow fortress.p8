@@ -114,6 +114,11 @@ function _update()
         stage2_update()
     elseif current_stage == 3 then
         stage3_update()
+    elseif current_stage == 4 then
+        stage4_update()
+    
+    
+    
     end
 
 
@@ -139,6 +144,8 @@ function _draw()
         stage2_draw()
     elseif current_stage == 3 then
         stage3_draw()
+    elseif current_stage == 4 then
+        stage4_draw()
     end
 
     -- spieler-sprite immer zeichnen
@@ -335,6 +342,7 @@ function stage1_draw()
     -- spieler-sprite immer zeichnen
     spr(sprite, px, py)
 end
+
 
 
 -- tab 2: stage 2 - spezifische spiellogik
@@ -643,8 +651,10 @@ function draw_dialog_near_player(dialog_text, offset_y)
 end
 end
 
+
 local coin_count = 1 -- startwert: katze hat eine mれもnze gegeben
 local stage3_coin_obtained = false -- neue variable zum halten des mれもnzenzustands
+local hide_coin_ui = false -- steuert, ob die mれもnze oben links angezeigt wird
 
 -- allgemeine variablen fれもr mれもnzen und ihre zonen
 local coin_zones = {
@@ -657,7 +667,7 @@ local coin_zones = {
 local teleports = {
     {29, 21, 86, 43}, -- haus
     {69, 15, 125, 21}, -- metzger
-    {76, 15, 71, 43}, -- bれさcker
+    {76, 15, 71, 43}, -- bれさrsacker
     {45, 7, 120, 61}, -- schloss
     {72, 7, 117, 9} -- taverne
 }
@@ -704,6 +714,8 @@ function stage3_update()
                     post_dog_dialog_stage = 1 -- zeige den text fれもr weniger als 4 mれもnzen
                 else
                     post_dog_dialog_stage = 4 -- zeige den text fれもr genau 4 oder mehr mれもnzen
+                    coin_count -= 4 -- mれもnzen abziehen
+                    stage3_coin_obtained = false -- mれもnze zurれもcksetzen
                 end
                 post_dog_dialog_active = true -- aktiviere den post-dialog
             end
@@ -711,15 +723,21 @@ function stage3_update()
         return -- blockiere bewegung und alle anderen aktionen wれさhrend des dialogs
     end
 
-    if post_dog_dialog_active then
-        -- fortschritt im post-dialog
-        if btnp(5) then -- "x"-taste gedrれもckt
-            post_dog_dialog_active = false -- post-dialog beenden
+if post_dog_dialog_active then
+    -- fortschritt im post-dialog
+    if btnp(5) then -- "x"-taste gedrれもckt
+        post_dog_dialog_active = false -- post-dialog beenden
+        if post_dog_dialog_stage == 4 then
+            hide_coin_ui = true -- mれもnzenanzeige deaktivieren
+            current_stage = 4           
         end
-        return -- blockiere bewegung und alle anderen aktionen wれさhrend des post-dialogs
-    end
+ 
+        end
+    
+    return -- blockiere bewegung und andere aktionen wれさhrend des post-dialogs
+end
 
-    -- れうberprれもfen, ob der spieler in der hund-zone ist
+    -- れもberprれもfen, ob der spieler in der hund-zone ist
     player_in_dog_zone = flr(px / 8) >= dog_zone.x and flr(px / 8) < dog_zone.x + dog_zone.w and
                          flr(py / 8) >= dog_zone.y and flr(py / 8) < dog_zone.y + dog_zone.h
 
@@ -758,7 +776,7 @@ function stage3_update()
         end
     end
 
-    -- れうberprれもfen und aktualisieren der mれもnzen-zonen
+    -- れもberprれもfen und aktualisieren der mれもnzen-zonen
     for _, zone in pairs(coin_zones) do
         local player_in_zone = flr(px / 8) >= zone.x and flr(px / 8) < zone.x + zone.w and
                                flr(py / 8) >= zone.y and flr(py / 8) < zone.y + zone.h
@@ -778,19 +796,19 @@ function stage3_draw()
     cls()
     map(0, 0, 0, 0, 128, 64)  -- karte fれもr stage 3 laden
 
-    -- mれもnze weiterhin anzeigen, wenn erhalten
-    if stage3_coin_obtained then
+    -- mれもnze und anzahl nur anzeigen, wenn `hide_coin_ui` nicht aktiv ist
+    if stage3_coin_obtained and not hide_coin_ui then
         draw_item_in_ui(68, -7, coin_count) -- mれもnze im ui anzeigen
     end
-    
+
     -- spieler-sprite immer zeichnen
     spr(sprite, px, py)
-    
+
     -- zeige den normalen dog-dialog, wenn er aktiv ist
     if dog_dialog_active then
         draw_dog_dialog()
     end
-    
+
     -- zeige den post-dialog an, wenn er aktiv ist
     if post_dog_dialog_active then
         draw_post_dog_dialog()
@@ -827,7 +845,113 @@ function draw_post_dog_dialog()
     local textbox_x = px - camera_x
     local textbox_y = py - camera_y  -- oder beliebiger offset
     draw_textbox(post_dog_dialog_text[post_dog_dialog_stage], textbox_x, textbox_y, 120, 40)
+
+     -- wenn der dialog abgeschlossen ist und die mれもnzen abgezogen wurden, zeichne sprite 78
+   
 end
+
+
+-- tab 4: stage 4 - spezifische spiellogik
+
+local teleports = {
+    {29, 21, 86, 43}, -- haus
+    {69, 15, 125, 21}, -- metzger
+    {76, 15, 71, 43}, -- bれさrsacker
+    {45, 7, 120, 61}, -- schloss
+    {72, 7, 117, 9}, -- taverne
+    {{16, 8, 4, 1}, {76, 63, 2, 1}, {16, 9}} -- taverne
+}
+
+local sprite_97_position = {x = 64 * 8, y = 11 * 8} -- startposition von sprite 97
+local sprite_97_target = {x = 18 * 8, y = 10 * 8} -- zielposition von sprite 97
+local sprite_97_moving = false -- flag, um die bewegung von sprite 97 zu steuern
+local sprite_97_speed = 1 -- geschwindigkeit von sprite 97
+local player_zone = {x = 71, y = 10, w = 4, h = 2} -- zone, die der spieler betreten muss
+
+function stage4_update()
+    -- hier kannst du deine update-logik fれもr stage 4 hinzufれもgen
+    if not sprite_78_drawn then
+        sprite_78_drawn = true -- flag setzen, damit es nur einmal ausgefれもhrt wird
+    end
+
+    -- prれもfen, ob der spieler die definierte zone betritt
+    if not sprite_97_moving and
+       flr(px / 8) >= player_zone.x and flr(px / 8) < player_zone.x + player_zone.w and
+       flr(py / 8) >= player_zone.y and flr(py / 8) < player_zone.y + player_zone.h then
+        sprite_97_moving = true
+    end
+
+    -- wenn sprite 97 sich bewegen soll
+    if sprite_97_moving then
+        if sprite_97_position.x < sprite_97_target.x then
+            sprite_97_position.x += sprite_97_speed
+        elseif sprite_97_position.x > sprite_97_target.x then
+            sprite_97_position.x -= sprite_97_speed
+        end
+
+        if sprite_97_position.y < sprite_97_target.y then
+            sprite_97_position.y += sprite_97_speed
+        elseif sprite_97_position.y > sprite_97_target.y then
+            sprite_97_position.y -= sprite_97_speed
+        end
+
+        -- bewegung stoppen, wenn das ziel erreicht ist
+        if sprite_97_position.x == sprite_97_target.x and sprite_97_position.y == sprite_97_target.y then
+            sprite_97_moving = false
+        end
+    end
+
+    -- teleportation prれもfen
+    for _, teleport in pairs(teleports) do
+        if type(teleport[1]) == "table" then
+            -- zonen-teleport: hin- und rれもckteleport prれもfen
+            local zone = teleport[1]
+            local dest = teleport[2]
+
+            -- hinteleportation: spieler betritt die zone
+            if flr(px / 8) >= zone[1] and flr(px / 8) < zone[1] + zone[3] and
+               flr(py / 8) >= zone[2] and flr(py / 8) < zone[2] + zone[4] then
+                px = dest[1] * 8 -- ziel x
+                py = dest[2] * 8 -- ziel y
+            end
+
+            -- rれもckteleportation: spieler befindet sich im zielbereich
+            if flr(px / 8) == dest[1] and flr(py / 8) == dest[2] then
+                px = zone[1] * 8 -- zurれもck x (startpunkt der zone)
+                py = (zone[2] + zone[4]) * 8 -- zurれもck y (unterhalb der zone)
+            end
+        else
+            -- punkte-teleport: standard-logik
+            -- hinteleportation
+            if flr(px / 8) == teleport[1] and flr(py / 8) == teleport[2] then
+                px = teleport[3] * 8 -- ziel x
+                py = teleport[4] * 8
+
+            -- rれもckteleportation
+            elseif flr(px / 8) == teleport[3] and flr(py / 8) == teleport[4] then
+                px = teleport[1] * 8 -- zurれもck x
+                py = (teleport[2] + 2) * 8 -- zurれもck y
+            end
+        end
+    end
+end
+
+function stage4_draw()
+    cls()
+    map(0, 0, 0, 0, 128, 64) -- karte fれもr stage 4 laden
+
+    -- sprite 78 zeichnen, wenn es markiert ist
+    if sprite_78_drawn then
+        draw_item_in_ui(78, -7, nil) -- sprite 78 im ui anzeigen
+    end
+
+    -- sprite 97 zeichnen
+    spr(97, sprite_97_position.x, sprite_97_position.y)
+
+    -- hier kannst du andere ui-elemente oder spieler-position zeichnen
+    spr(sprite, px, py) -- spieler zeichnen
+end   
+
     
      
     
