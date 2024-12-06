@@ -952,6 +952,162 @@ function stage4_draw()
     spr(sprite, px, py) -- spieler zeichnen
 end   
 
+
+
+
+
+
+
+
+
+
+-- tab 6: stage 6 - spezifische spiellogik
+
+local current_stage = 6 -- aktuelle stage
+local teleports = {
+    {29, 21, 86, 43}, {69, 15, 125, 21}, {76, 15, 71, 43}, {45, 7, 120, 61}, {72, 7, 117, 9}, {28, 7, 99, 61},{29, 15, 103, 8} 
+}
+
+-- dialogsystem
+local dialog_system = {
+    
+    grimreaper = {
+        active = false,
+        stage = 1,
+        completed = false,
+        text = {
+            "die glocken klagen\nnah und fern,\nihr widerhall\ngefaellt dem herrn.",
+            "das grab ruft laut,\ndie erde schreit,\nzu viele fielen\njuengst im leid.",
+            "der schwarze tod\nbringt seelen mir,\ndoch schuldige\nverweilen hier.",
+            "im thronsaal\nsind sie eingesperrt,\nder koenig\nwurde fortgezehrt.",
+            "bald wirst du\ndorthin gelangen,\nnur unterwelt\nwird dich empfangen.",
+            "drum bete still\nfuer deinen leib,\ndie entscheidung wird\nnicht einfach sein."},
+        trigger_zone = {74, 79, 53, 56}},
+    
+    bible = {
+        active = false,
+        stage = 1,
+        completed = false,
+        text = {
+            "und der herr sprach:\nwer das leben sucht,\nder soll hinabsteigen\nwo das licht verborgen ist.",
+            "denn in der dunkelheit\noffenbart sich die wahrheit,\ndie den mutigen allein gehoert."},
+        trigger_zone = {98, 101, 52, 55}},
+    
+    diary = {
+        active = false,
+        stage = 1,
+        completed = false,
+        text = {
+            "nicht alle,\ndie dunkelheit bringen,\nsind selbst\nvon dunkelheit erfuellt."
+        },
+        trigger_zone = {103, 105, 2, 4}}}
+
+local zone_entered = false
+
+function start_dialog(dialog)
+    if not dialog.active and not dialog.completed then
+        dialog.active = true
+        dialog.stage = 1
+    end
+end
+
+function update_dialog(dialog)
+    if dialog.active then
+        if btnp(5) then
+            dialog.stage += 1
+            if dialog.stage > #dialog.text then
+                dialog.active = false
+                dialog.completed = true
+            end
+        end
+    end
+end    
+
+function draw_dialog(dialog, player_x, player_y)
+    if dialog.active then
+        draw_textbox(dialog.text[dialog.stage], player_x, player_y, 120, 40)
+    end
+end
+
+function player_in_zone(zone)
+    return flr(px / 8) >= zone[1] and flr(px / 8) < zone[2] and
+           flr(py / 8) >= zone[3] and flr(py / 8) < zone[4]
+end
+
+-- stage 6 update-logik
+function stage6_update()
+    if current_stage ~= 6 then return end -- only update if current_stage is 6
+
+    -- initial setup for stage 6
+    mset(29, 15, 111) 
+    mset(29, 16, 107) 
+    mset(28, 6, 93) 
+    mset(28, 7, 109)
+    mset(28, 8, 109)
+ 
+    if not grim_reaper.moving then
+        grim_reaper.moving = true
+    end
+
+    if grim_reaper.moving then
+        if grim_reaper.phase == 1 and grim_reaper.pos.x < grim_reaper.target.x then
+            grim_reaper.pos.x += grim_reaper.speed
+        elseif grim_reaper.phase == 1 then
+            grim_reaper.phase = 2 -- switch to phase 2
+        end
+
+        if grim_reaper.phase == 2 then
+            grim_reaper.moving = false -- grim reaper stops moving
+        end
+    end
+
+    for _, teleport in pairs(teleports) do
+        if flr(px / 8) == teleport[1] and flr(py / 8) == teleport[2] then
+            px, py = teleport[3] * 8, teleport[4] * 8
+        elseif flr(px / 8) == teleport[3] and flr(py / 8) - 2 == teleport[4] then
+            px, py = teleport[1] * 8, (teleport[2] + 2) * 8
+        end
+    end
+
+    if flr(px / 8) >= 16 and flr(px / 8) < 20 and flr(py / 8) >= 8 and flr(py / 8) < 9 then
+        px, py = 76 * 8, 61 * 8
+    elseif flr(px / 8) >= 76 and flr(px / 8) < 78 and flr(py / 8) >= 63 and flr(py / 8) < 65 then
+        px, py = 16 * 8, 10 * 8
+        graveyard_returned = true
+    end
+    
+    if player_in_zone(dialog_system.grimreaper.trigger_zone) then
+        start_dialog(dialog_system.grimreaper)
+    elseif player_in_zone(dialog_system.bible.trigger_zone) then
+        start_dialog(dialog_system.bible)
+    elseif player_in_zone(dialog_system.diary.trigger_zone) then
+        start_dialog(dialog_system.diary)
+    end
+
+    update_dialog(dialog_system.grimreaper)
+    update_dialog(dialog_system.bible)
+    update_dialog(dialog_system.diary)
+    update_camera()
+end
+
+-- stage 6 draw logic
+function stage6_draw()
+    if current_stage ~= 6 then return end -- only draw if current_stage is 6
+
+    cls()
+    map(0, 0, 0, 0, 128, 64)
+
+    if not grim_reaper.disappear then
+        spr(96, grim_reaper.pos.x, grim_reaper.pos.y)
+    end
+
+    draw_dialog(dialog_system.grimreaper, px, py)
+    draw_dialog(dialog_system.bible, px, py)
+    draw_dialog(dialog_system.diary, px, py)
+
+    spr(sprite, px, py)
+end
+
     
      
     
