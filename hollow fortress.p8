@@ -1108,7 +1108,93 @@ function stage6_draw()
     spr(sprite, px, py)
 end
 
-    
+
+
+
+
+
+
+
+
+
+
+
+-- kollisions 
+
+local blocking_sprites = { 44, 23, 26, 27, 15, 62, 63, 77, 85, 86, 110, 126, 7, 8, 9, 24, 118, 102, 40, 53, 21, 22, 18, 12, 5, 19, 46      }
+local blocking_zones = { {16, 19, 9, 1}, {27, 19, 6, 1}, {5, 18, 9, 3}, {66, 13, 5, 1}, {73, 13, 5, 1}, {80, 13, 6, 1}, {80, 19, 6, 1}, {72, 19, 5, 1}, {64, 19, 5, 1}, {56, 19, 5, 1}, {26, 13, 10, 1}, {16, 13, 7, 1}, {2, 7, 88, 1}             }
+local free_zones = { {2, 8, 62, 1}, {15, 16, 23, 1}, {53, 16, 37, 1}, {5, 22, 13, 1}, {24, 22, 14, 1}, {55, 22, 33, 1}, {40, 22, 9, 1}, {70, 8, 20, 1}, {65, 9, 5, 1}, {19, 23, 5, 1}, {38, 20, 2, 1}, {49, 21, 2, 1}, {51, 20, 1, 1}, {40, 21, 1, 1}                    }
+local roof_zones = { {5, 16, 9, 2}, {16, 12, 7, 2}, {27, 18, 6, 2}, {16, 18, 9, 2}, {26, 12, 10, 2}, {66, 11, 5, 3}, {73, 12, 5, 2}, {80, 12, 6, 2}, {80, 18, 6, 2}, {72, 18, 5, 2}, {57, 8, 3, 2}, {64, 18, 5, 2}, {56, 18, 5, 2} }
+
+-- kollisionsprれもfung
+function check_collision(player_x, player_y)
+    for _, corner in ipairs({
+        {player_x, player_y},          -- oben links
+        {player_x + 7, player_y},      -- oben rechts
+        {player_x, player_y + 7},      -- unten links
+        {player_x + 7, player_y + 7},  -- unten rechts
+    }) do
+        local tile_x = flr(corner[1] / 8)
+        local tile_y = flr(corner[2] / 8)
+
+        for _, zone in ipairs(free_zones) do
+            if tile_x >= zone[1] and tile_x < zone[1] + zone[3] and
+               tile_y >= zone[2] and tile_y < zone[2] + zone[4] then
+                return false
+            end
+        end
+
+        for _, zone in ipairs(blocking_zones) do
+            if tile_x >= zone[1] and tile_x < zone[1] + zone[3] and
+               tile_y >= zone[2] and tile_y < zone[2] + zone[4] then
+                return true
+            end
+        end
+
+        local tile_id = mget(tile_x, tile_y)
+        for _, sprite in ipairs(blocking_sprites) do
+            if tile_id == sprite then
+                return true
+            end
+        end
+    end
+    return false
+end    
      
-    
- 
+-update
+
+-- kollision れもberprれもfen
+    if not check_collision(new_px, new_py) then
+        px, py = new_px, new_py
+    end
+
+-- draw 
+
+-- dれさcher zeichnen, falls der spieler darunter ist
+    for _, zone in ipairs(roof_zones) do
+        for y = zone[2], zone[2] + zone[4] - 1 do
+            if py + 7 >= y * 8 then  -- zeichne das dach nur, wenn es unter dem charakter ist
+                for x = zone[1], zone[1] + zone[3] - 1 do
+                    spr(mget(x, y), x * 8, y * 8)
+                end
+            end
+        end
+    end
+end
+
+
+function update_player()
+    local move_x, move_y = 0, 0
+
+    if btn(0) then move_x = -speed end  -- links
+    if btn(1) then move_x = speed end   -- rechts
+    if btn(2) then move_y = -speed end  -- hoch
+    if btn(3) then move_y = speed end   -- runter
+
+    local new_px, new_py = px + move_x, py + move_y
+
+    -- れうberprれもfe kollision bevor position aktualisiert wird
+    if not check_collision(new_px, new_py) then
+        px, py = new_px, new_py
+    end
+end
