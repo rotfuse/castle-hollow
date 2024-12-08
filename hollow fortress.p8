@@ -27,9 +27,9 @@ end
 
 -- kollisionen
 
-free_sprites = {0, 1, 2, 11, 12, 13, 20, 24, 25, 29, 31, 37, 41, 42, 57, 91, 101, 107, 108, 109, 111, 117, 123, 124}
+free_sprites = {0, 1, 2, 11, 12, 13, 20, 24, 25, 29, 31, 36, 37, 41, 42, 57, 91, 101, 107, 108, 109, 111, 117, 121, 123, 124}
 blocking_zones = { {16, 19, 9, 1}, {27, 19, 6, 1}, {5, 18, 9, 3}, {66, 13, 5, 1}, {73, 13, 5, 1}, {80, 13, 6, 1}, {80, 19, 6, 1}, {72, 19, 5, 1}, {64, 19, 5, 1}, {56, 19, 5, 1}, {26, 13, 10, 1}, {16, 13, 7, 1}, {2, 7, 88, 1} }
-free_zones = { {2, 8, 62, 1}, {15, 16, 23, 1}, {53, 16, 37, 1}, {5, 22, 13, 1}, {24, 22, 14, 1}, {55, 22, 33, 1}, {40, 22, 9, 1}, {70, 8, 20, 1}, {65, 9, 5, 1}, {19, 23, 5, 1}, {38, 20, 2, 1}, {49, 21, 2, 1}, {51, 20, 1, 1}, {40, 21, 1, 1}, {72, 7, 1, 1}, {45, 6, 1, 3}, {16, 7, 3, 1}, }
+free_zones = { {2, 8, 62, 1}, {15, 16, 23, 1}, {53, 16, 37, 1}, {5, 22, 13, 1}, {24, 22, 14, 1}, {55, 22, 33, 1}, {40, 22, 9, 1}, {70, 8, 20, 1}, {65, 9, 5, 1}, {19, 23, 5, 1}, {38, 20, 2, 1}, {49, 21, 2, 1}, {51, 20, 1, 1}, {40, 21, 1, 1}, {72, 7, 1, 1}, {45, 6, 1, 3}, {16, 7, 3, 1}, {28, 7, 1, 2}, {126, 42, 1, 1}, }
 
 -- kollisionsprれもfung
 function check_collision(player_x, player_y)
@@ -117,9 +117,7 @@ end
 
 function player_movement()
     -- keine bewegung bei dialogs
-    if well_system.active or monolog_active or castletable_monolog_active or cat_dialog_1_active or cat_dialog_2_active then
-        return  
-    end
+    
 
     local new_px, new_py = px, py
     local moving = false
@@ -190,7 +188,6 @@ camera_bounds = {
     [9] = {99, 107, 0, 10, 103, 5}, -- pfarrerzimmer (statisch)
 
 }
-
 function update_camera()
     local bounds = camera_bounds[current_area]  -- nutze jetzt `current_area` anstelle von `current_stage`
     
@@ -267,6 +264,8 @@ function _update()
         stage6_update()
     elseif current_stage == 7 then
         stage7_update()
+    elseif current_stage == 8 then
+        stage8_update()
     end
 end
 
@@ -291,17 +290,13 @@ function _draw()
         stage6_draw()
     elseif current_stage == 7 then
         stage7_draw()
+    elseif current_stage == 8 then
+        stage8_draw()
     end
 
     spr(sprite, px, py)
     draw_roofs(px, py)
 end
-
-
-
-
-
-
 
 
 
@@ -353,22 +348,23 @@ function _init()
     tile_changed = false  -- kachelれさnderung als false setzen
     tile_animated = false  -- kachel-animation als false setzen
     current_room = nil  -- initialisiert als nil
-    current_stage = 1 -- start in stage 1
+    current_stage = 8 -- start in stage 1
     monolog_active = true -- monolog aktivieren beim start
+
+px= 115*8
+py= 37*8
+
+
+
 end
 
--- flagge, die speichert, ob der spieler die zone betreten hat
 local zone_entered = false
 
--- update-funktion fれもr stage 1
 function stage1_update()
 
     current_area = get_area_by_coordinates(px, py)  -- ermittelt die stage des spielers basierend auf den koordinaten
     update_camera()    
-    
-    
-    
-    -- monolog fれもr stage 1
+        
     if monolog_active then
         if btnp(❎) then
             monolog_stage += 1
@@ -397,7 +393,8 @@ function stage1_update()
             initial_monolog_active = false  -- ende der animation, bewegung freigeben
         end
     else
-        -- zone betreten, um zweiten monolog zu starten
+        
+        -- zone fuer 2. dialog
         if not castletable_monolog_active and not castletable_monolog_completed and
            flr(px / 8) >= 115 and flr(px / 8) < 115 + 10 and
            flr(py / 8) == 59 then
@@ -420,13 +417,13 @@ function stage1_update()
             current_area = 1  -- setze die area zurれもck auf die ursprれもngliche area
             update_camera()
 
-            -- kachelれさnderung an (58, 13) und animation starten
+            -- katze am marktplatz
+            
             if not tile_changed then
-                mset(58, 13, 98)  -- れさndere kachel-sprite
+                mset(58, 13, 98) 
                 tile_changed = true
             end
             
-            -- setze flag fれもr zone_entered
             zone_entered = true
         end
         
@@ -446,16 +443,15 @@ function stage1_update()
                     cat_dialog_1_active = false
                     cat_dialog_1_completed = true  -- monolog abgeschlossen
                     
-                    -- kacheln れさndern nach monolog_1
-                    mset(69, 15, 111)   -- れ░ndere sprite von kachel 45, 8 zu 77
-                    mset(69, 16, 107)   -- れ░ndere sprite von kachel 45, 8 zu
-                    mset(76, 15, 111)   -- れ░ndere sprite von kachel 45, 8 zu 77
-                    mset(76, 16, 107)   -- れ░ndere sprite von kachel 45, 8 zu
+                    -- tueren aufmahcen
+                    mset(69, 15, 111)   
+                    mset(69, 16, 107)  
+                    mset(76, 15, 111)  
+                    mset(76, 16, 107)  
            
-                    -- kachel an (43, 18) れさndern und animation starten
-                    mset(43, 18, 124) -- beispiel-kachelれさnderung
-                    tile_animated = true  -- animation starten
-                    
+                    -- blubbern
+                    mset(43, 18, 124)
+                    tile_animated = true          
                     current_stage = 2
                 end
             end
@@ -463,13 +459,11 @@ function stage1_update()
     end
 end
 
--- draw-funktion fれもr stage 1
 function stage1_draw()
     
     cls()
     map(0, 0, 0, 0, 128, 64)  -- karte zeichnen
 
-    -- zeichnen der monologe
     if monolog_active then
         draw_textbox(monolog_text[monolog_stage], px, py, 120, 40)
     elseif castletable_monolog_active then
@@ -480,28 +474,16 @@ function stage1_draw()
         draw_textbox(cat_dialog_2[cat_dialog_2_stage], px, py, 120, 40)
     else
     
-      -- animierte kachel (43, 18) wechseln zwischen 123 und 124
-        if tile_animated then
-            local sprite_index = 123 + flr((t() * 5) % 2)  -- wechseln zwischen 123 und 124
-            mset(43, 18, sprite_index)  -- setze die kachel auf den wechselnden sprite
+    if tile_animated then
+        local sprite_index = 123 + flr((t() * 5) % 2) 
+        mset(43, 18, sprite_index)  
+        
         end
     end
 
     -- spieler-sprite immer zeichnen
     spr(sprite, px, py)
 end
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -617,7 +599,7 @@ end
 function stage2_update()
     
     
-    -- kachelanimation
+    -- blubberblasen
     if tile_animated and not zones.fish.completed and not zones.fish.taken then
         mset(43, 18, 123 + flr((t() * 5) % 2))
     elseif zones.fish.taken and zones.fish.completed then
@@ -647,7 +629,6 @@ function stage2_draw()
     cls()
     map(0, 0, 0, 0, 128, 64)
     spr(sprite, px, py)
-    if tile_animated then mset(43, 18, 123 + flr((t() * 5) % 2)) end
 
     -- dialoge zeichnen
     for _, item in pairs({"meat", "fish"}) do
@@ -672,20 +653,6 @@ function draw_dialog_near_player(dialog_text, offset_y)
         draw_textbox(dialog_text, px - camera_x, py - camera_y - offset_y, 120, 20)
     end
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -719,9 +686,6 @@ local teleport_zones = {
         {from = {72, 7}, to = {117, 9}, area_id = 5}, -- taverne
         {from = {117, 11}, to = {72, 9}, area_id = 1} -- back to map
 }
-
-
-
 
 -- variablen fれもr den hundedialog
 dog_dialog_active = false -- ob der hundedialog aktiv ist
@@ -771,32 +735,27 @@ function stage3_update()
                 post_dog_dialog_active = true -- aktiviere den post-dialog
             end
         end
-        return -- blockiere bewegung und alle anderen aktionen wれさhrend des dialogs
     end
 
     if post_dog_dialog_active then
         -- fortschritt im post-dialog
-        if btnp(5) then -- "x"-taste gedrれもckt
-            post_dog_dialog_active = false -- post-dialog beenden
+        if btnp(5) then
+            post_dog_dialog_active = false 
             if post_dog_dialog_stage == 4 then
-                hide_coin_ui = true -- mれもnzenanzeige deaktivieren
+                hide_coin_ui = true
                 current_stage = 4
             end
         end
-        return -- blockiere bewegung und andere aktionen wれさhrend des post-dialogs
     end
 
-    -- れもberprれもfen, ob der spieler in der hund-zone ist
     player_in_dog_zone = flr(px / 8) >= dog_zone.x and flr(px / 8) < dog_zone.x + dog_zone.w and
                          flr(py / 8) >= dog_zone.y and flr(py / 8) < dog_zone.y + dog_zone.h
 
-    -- dialog aktivieren, wenn der spieler in der hund-zone ist und der dialog noch nicht abgeschlossen ist
     if player_in_dog_zone and not dog_dialog_active and not dog_dialog_completed then
         dog_dialog_active = true
         dog_dialog_stage = 1 -- starte den dialog von vorne
     end
 
-    -- wenn die erste mれもnze in stage 3 erhalten wurde, wird coin_count nur einmal auf 1 gesetzt
     if zones.cat_dialog.coin_obtained and not stage3_coin_obtained then
         stage3_coin_obtained = true -- markiere, dass die mれもnze in stage 3 erhalten wurde
     end
@@ -836,20 +795,14 @@ function stage3_draw()
     cls()
     map(0, 0, 0, 0, 128, 64)  -- karte fれもr stage 3 laden
 
-    -- mれもnze und anzahl nur anzeigen, wenn `hide_coin_ui` nicht aktiv ist
     if stage3_coin_obtained and not hide_coin_ui then
         draw_item_in_ui(68, -7, coin_count) -- mれもnze im ui anzeigen
     end
 
-    -- spieler-sprite immer zeichnen
-    spr(sprite, px, py)
-
-    -- zeige den normalen dog-dialog, wenn er aktiv ist
     if dog_dialog_active then
         draw_dog_dialog()
     end
 
-    -- zeige den post-dialog an, wenn er aktiv ist
     if post_dog_dialog_active then
         draw_post_dog_dialog()
     end
@@ -877,24 +830,7 @@ end
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+-- tab 4
 local teleport_zones = {
         {from = {29, 21}, to = {86, 43}, area_id = 6}, -- haus 
         {from = {86, 45}, to = {29, 23}, area_id = 1}, -- back to map 
@@ -1085,21 +1021,8 @@ end
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 -- stage 5
-local current_area = 7
+local current_area = 6
 local flower_count = 24
 local flower_sprites = {117, 57} -- ids der sprites mit flagge 7
 
@@ -1107,6 +1030,9 @@ local flower_sprites = {117, 57} -- ids der sprites mit flagge 7
 local enemies = {
     {pos = {x = 70 * 8, y = 54 * 8}, sprite = 80, animation_stage = 1, anim_timer = 0, dx = 0, dy = 0},
     {pos = {x = 83 * 8, y = 54 * 8}, sprite = 80, animation_stage = 1, anim_timer = 0, dx = 0, dy = 0},
+  --  {pos = {x = 70 * 8, y = 60 * 8}, sprite = 80, animation_stage = 1, anim_timer = 0, dx = 0, dy = 0},
+   -- {pos = {x = 83 * 8, y = 60 * 8}, sprite = 80, animation_stage = 1, anim_timer = 0, dx = 0, dy = 0},
+
 }
 
 local grim_reaper = {
@@ -1114,7 +1040,7 @@ local grim_reaper = {
     target = {x = 76 * 8, y = 53 * 8}, -- zielposition
     moving = false, -- gibt an, ob er sich bewegt
     speed = 1, -- geschwindigkeit
-    disappear = false, -- gibt an, ob er verschwinden soll
+    disappear = true, -- gibt an, ob er verschwinden soll
     phase = 1 -- phase der bewegung
 }
 
@@ -1255,9 +1181,6 @@ end
 -- stage 5 update-logik
 function stage5_update()
 
-printh("stage 5") -- log transition to stage 6
-
-
     for _, enemy in pairs(enemies) do
         update_enemy_movement(enemy)
     end
@@ -1270,7 +1193,12 @@ printh("stage 5") -- log transition to stage 6
     end
 
     if enemies_disappearing and all_enemies_gone() then
+        enemies_disappearing = false
         grim_reaper.moving = true
+        grim_reaper.disappear = false -- grim reaper ist sichtbar
+    end
+
+    if grim_reaper.moving then
         move_grim_reaper()
     end
 
@@ -1281,7 +1209,6 @@ printh("stage 5") -- log transition to stage 6
     update_dialog(dialog_system.grimreaper)
 end
 
--- stage 5 zeichnen
 function stage5_draw()
 
     draw_item_in_ui(78, -7, nil)
@@ -1335,17 +1262,16 @@ function all_enemies_gone()
     return true
 end
 
--- move grim reaper into the scene
 function move_grim_reaper()
     if grim_reaper.moving then
         if grim_reaper.pos.x < grim_reaper.target.x then
             grim_reaper.pos.x += grim_reaper.speed
         else
-            grim_reaper.moving = false
-            grim_reaper.disappear = false -- ensure he does not disappear after reaching the destination
+            grim_reaper.moving = false -- bewegung stoppen
         end
     end
 end
+
 
 -- check if grim reaper reached destination
 function grim_reaper_reached_destination()
@@ -1359,18 +1285,7 @@ end
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+-- stage 6
 local teleport_zones = {
         {from = {29, 21}, to = {86, 43}, area_id = 6}, -- haus 
         {from = {86, 45}, to = {29, 23}, area_id = 1}, -- back to map 
@@ -1388,21 +1303,10 @@ local teleport_zones = {
         {from = {103, 10}, to = {29, 17}, area_id = 1} -- back to map
 }
 
+local graveyard_zone = {x = 75, y = 58, w = 4, h = 4}
+
 -- dialogsystem
 local dialog_system = {
-    
-    grimreaper = {
-        active = false,
-        stage = 1,
-        completed = false,
-        text = {
-            "die glocken klagen\nnah und fern,\nihr widerhall\ngefaellt dem herrn.",
-            "das grab ruft laut,\ndie erde schreit,\nzu viele fielen\njuengst im leid.",
-            "der schwarze tod\nbringt seelen mir,\ndoch schuldige\nverweilen hier.",
-            "im thronsaal\nsind sie eingesperrt,\nder koenig\nwurde fortgezehrt.",
-            "bald wirst du\ndorthin gelangen,\nnur unterwelt\nwird dich empfangen.",
-            "drum bete still\nfuer deinen leib,\ndie entscheidung wird\nnicht einfach sein."},
-        trigger_zone = {74, 79, 53, 56}},
     
     bible = {
         active = false,
@@ -1548,15 +1452,12 @@ function stage6_update()
         graveyard_returned = true
     end
 
-    if player_in_zone(dialog_system.grimreaper.trigger_zone) then
-        start_dialog(dialog_system.grimreaper)
-    elseif player_in_zone(dialog_system.bible.trigger_zone) then
+    if player_in_zone(dialog_system.bible.trigger_zone) then
         start_dialog(dialog_system.bible)
     elseif player_in_zone(dialog_system.diary.trigger_zone) then
         start_dialog(dialog_system.diary)
     end
     
-    update_dialog(dialog_system.grimreaper)
     update_dialog(dialog_system.bible)
     update_dialog(dialog_system.diary)
     update_well_dialog()
@@ -1571,7 +1472,6 @@ function stage6_draw()
 
         spr(96, 76 * 8, 53 * 8)
 
-        draw_dialog(dialog_system.grimreaper, px, py)
         draw_dialog(dialog_system.bible, px, py)
         draw_dialog(dialog_system.diary, px, py)
         draw_well_dialog(px, py)
@@ -1586,28 +1486,21 @@ end
 
 
 
+-- stage 7
 
+local teleport_zones = {
+        {from = {22, 39}, to = {35, 42}, area_id = 6}, 
+        {from = {35, 44}, to = {22, 41}, area_id = 6}, 
+        {from = {61, 42}, to = {46, 59}, area_id = 6},  
+        {from = {44, 59}, to = {59, 42}, area_id = 6}, 
 
+}
+local door_zone_1 = {x = 21, y = 39, w = 3, h = 3}
+local door_zone_2 = {x = 125, y = 43, w = 3, h = 3}
+local door_zone_3 = {x = 42, y = 40, w = 3, h = 3}
+local door_zone_4 = {x = 49, y = 40, w = 3, h = 3}
+local door_zone_5 = {x = 56, y = 40, w = 3, h = 3}
 
-
-
-
-
-
-
-
-
-
-
-
-local door_open = false
-local door_zone = {x = 21, y = 39, w = 3, h = 3} -- zone fれもr den hund
-local snake_active = false
-local snake_x, snake_y = 3 * 8, 58 * 8
-local snake_target_x, snake_target_y = 11 * 8, 42 * 8
-local snake_direction = "up"
-local snake_returning = false
-local snake_collision_timer = 0
 local key_item = {
     x = 36, -- tile-x-koordinate
     y = 58, -- tile-y-koordinate
@@ -1617,14 +1510,29 @@ local key_item = {
 }
 local key_count = 0 -- anzahl der schlれもssel (fれもr die ui)
 
--- funktion zur zone-れうberprれもfung
+local rat_sprite_id = 114 -- die ratte wird mit sprite-id 114 gezeichnet
+local rat_x, rat_y = 115, 33 -- position der ratte
+local rat_dialog_trigger_zone = {113, 33, 5, 3} -- die zone vor der ratte
+local rat_dialog_text = "was in aller welt!? \nwie bist du\nhier reingekommen?!"
+local rat_dialog_shown = false -- status, ob der dialog schon gezeigt wurde
+
+function player_in_rat_zone(zone)
+    return flr(px / 8) >= zone[1] and flr(px / 8) <= zone[1] + zone[3] and
+           flr(py / 8) >= zone[2] and flr(py / 8) <= zone[2] + zone[4]
+end
+
 function player_in_zone(zone)
     return flr(px / 8) >= zone[1] and flr(px / 8) <= zone[2] and
            flr(py / 8) >= zone[3] and flr(py / 8) <= zone[4]
 end
 
+function player_in_door_zone(door_zone)
+    return flr(px / 8) >= door_zone.x and flr(px / 8) < door_zone.x + door_zone.w and
+           flr(py / 8) >= door_zone.y and flr(py / 8) < door_zone.y + door_zone.h
+end
+
 function stage7_update()
-    -- schlれもssel einsammeln
+
     if not key_item.collected and player_in_zone(key_item.trigger_zone) then
         if btnp(5) then
             key_item.collected = true
@@ -1632,73 +1540,56 @@ function stage7_update()
         end
     end
 
-    -- spieler in der tれもr-zone
-    local player_in_door_zone = flr(px / 8) >= door_zone.x and flr(px / 8) < door_zone.x + door_zone.w and
-                                flr(py / 8) >= door_zone.y and flr(py / 8) < door_zone.y + door_zone.h
+    local door_zones = {door_zone_1, door_zone_2, door_zone_3, door_zone_4, door_zone_5}
 
-    if key_item.collected and player_in_door_zone then
+    for _, door_zone in pairs(door_zones) do
+    if key_item.collected and player_in_door_zone(door_zone) then
         if btnp(5) then
-            door_open = true
-            mset(22, 39, 111)
-            mset(22, 40, 107)
+            -- der mittlere tile (zweiter von links) bekommt mset
+            -- setze den tile oberhalb des mittleren tiles auf 111
+            mset(door_zone.x + 1, door_zone.y, 111)
+            -- setze den tile unterhalb des mittleren tiles auf 107
+            mset(door_zone.x + 1, door_zone.y + 1, 107)
+        end
+    end
+   
+    for _, zone in pairs(teleport_zones) do
+        if flr(px / 8) == zone.from[1] and flr(py / 8) == zone.from[2] then
+            px = zone.to[1] * 8
+            py = zone.to[2] * 8
+            current_area = zone.area_id  -- setze die aktuelle area id basierend auf dem teleportationsziel
+            update_camera()  -- kamera aktualisieren
         end
     end
 
-    -- schlange aktivieren
-    if flr(px / 8) == 3 and flr(py / 8) == 49 then
-        snake_active = true
+    -- treppe teleportation
+    
+    if flr(px / 8) >= 56 and flr(px / 8) < 58 and flr(py / 8) >= 50 and flr(py / 8) < 51 then
+    px, py = 126 * 8, 47 * 8
+    current_area = 7
+    update_camera()
+    elseif flr(px / 8) >= 125 and flr(px / 8) < 127 and flr(py / 8) >= 48 and flr(py / 8) < 49 then
+    px, py = 57 * 8, 52 * 8
+    current_area = 1
+    update_camera()
     end
 
-    -- bewegung der schlange
-    if snake_active then
-        local snake_speed = 1.8 -- geschwindigkeit auf 1.8
-
-        if not snake_returning then
-            if snake_direction == "up" then
-                snake_y -= snake_speed
-                if snake_y <= 42 * 8 then
-                    snake_direction = "right"
-                end
-            elseif snake_direction == "right" then
-                snake_x += snake_speed
-                if snake_x >= 11 * 8 then
-                    snake_direction = "done"
-                end
-            end
-        else
-            if snake_direction == "right" then
-                snake_x -= snake_speed
-                if snake_x <= 3 * 8 then
-                    snake_direction = "down"
-                end
-            elseif snake_direction == "down" then
-                snake_y += snake_speed
-                if snake_y >= 55 * 8 then
-                    snake_returning = false
-                    snake_direction = "up"
-                end
-            end
-        end
-
-        -- kollision mit spieler
-        if abs(snake_x - px) < 8 and abs(snake_y - py) < 8 then
-            if snake_collision_timer == 0 then -- nur beim ersten kontakt setzen
-                snake_collision_timer = 15 -- bildschirm fれもr 15 frames rot
-            end
-            snake_returning = true
-            snake_direction = "right"
-        end
+    if player_in_rat_zone(rat_dialog_trigger_zone) and not rat_dialog_shown then
+            rat_dialog_shown = true            
+    end        
+    
+    if rat_dialog_shown and btnp(5) then
+        rat_dialog_shown = false  -- setze den dialogstatus zurれもck
+        current_stage = 8  -- setze die finale stage auf 8
     end
-
-    -- timer fれもr roten bildschirm
-    if snake_collision_timer > 0 then
-        snake_collision_timer -= 1
-    end
+  end
 end
 
 function stage7_draw()
     cls()
     map(0, 0, 0, 0, 128, 64)
+
+    spr(rat_sprite_id, rat_x * 8, rat_y * 8)
 
     -- schlれもssel zeichnen
     if not key_item.collected then
@@ -1710,42 +1601,18 @@ function stage7_draw()
         draw_item_in_ui(104, -7)
     end
 
-    -- schlange zeichnen (kachelanimation)
-    if snake_active then
-        local snake_tile = 123 + flr((t() * 5) % 2) -- animation wechselt zwischen 123 und 124
-        spr(snake_tile, snake_x, snake_y)
-    end
-
-    -- rot-flash bei kollision (れもber alles gezeichnet)
-    if snake_collision_timer > 0 then
-        rectfill(0, 0, 127, 127, 8)
+    if rat_dialog_shown then
+        draw_textbox(rat_dialog_text, px, py, 120, 30)  -- textbox mit dem dialogtext zeichnen
     end
 end
 
-function stage7_draw()
-    cls()
-    map(0, 0, 0, 0, 128, 64)
 
-    -- schlれもssel zeichnen
-    if not key_item.collected then
-        spr(key_item.sprite_id, key_item.x * 8, key_item.y * 8)
-    end
 
-    -- schlれもssel in der ui
-    if key_count > 0 then
-        draw_item_in_ui(104, -7)
-    end
 
-    -- schlange zeichnen (kachelanimation)
-    if snake_active then
-        local snake_tile = 123 + flr((t() * 5) % 2) -- animation wechselt zwischen 123 und 124
-        spr(snake_tile, snake_x, snake_y)
-    end
 
-    -- rot-flash bei kollision (れもber alles gezeichnet)
-    if snake_collision_timer > 0 then
-        rectfill(0, 0, 127, 127, 8)
-    end
-end
+
+
+
+
 
 
